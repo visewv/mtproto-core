@@ -107,7 +107,9 @@ class RPC {
   }
 
   async handleTransportMessage(buffer) {
-    this.handleMessage(buffer);
+    this.handleMessage(buffer).catch((error) => {
+      this.debug(`error when handleMessage`, error);
+    });
   }
 
   async handlePQResponse(buffer) {
@@ -546,10 +548,14 @@ class RPC {
 
       const waitMessage = this.messagesWaitResponse.get(message.req_msg_id);
 
-      if (message.result._ === 'mt_rpc_error') {
-        waitMessage.reject(message.result);
+      if (waitMessage) {
+        if (message.result._ === 'mt_rpc_error') {
+          waitMessage.reject(message.result);
+        } else {
+          waitMessage.resolve(message.result);
+        }
       } else {
-        waitMessage.resolve(message.result);
+        this.debug(`${message._} for a non-existent message`, message);
       }
 
       this.messagesWaitResponse.delete(message.req_msg_id);
